@@ -58,13 +58,13 @@ def smbc(sample: models.Blackbox.Inputs) -> models.Trace[list[float]]:
 
 
 @click.command()
-@click.option("-i", "--iterations", type=int, default=100)
 @click.option("-f", "--frames", type=int, default=100)
-def main(iterations: int, frames: int):
+@click.option("-b", "--budget", type=int, default=400)
+def main(frames: int, budget: int):
     req = rtamt.parse_dense("always (x < 100)", {"x": 0, "y": 1})
     opts = staliro.TestOptions(
         tspan=(0, frames),
-        iterations=iterations,
+        iterations=budget,
         signals={"joystick": staliro.SignalInput(control_points=[(0, 360)]*frames)}
     )
     opt = optimizers.UniformRandom()
