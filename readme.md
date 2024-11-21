@@ -258,3 +258,11 @@ Valid lines include:
 Each frame process one line. So if taliro decides we should continuously go right for several seconds, the input should have several lines of `0,1`.
 
 The output for executing `smbc` with a given testcase is the same as the example output in `Step 4` where the coordinates `(i, j)` is printed, `i` is the position in the horizontal direction (we want this to be as high as possible) and `j` is the position in the vertical direction.
+
+## Running the PSY-TaLiRo test module
+
+To run the test for PSY-TaLiRo you can run the command `pipenv run main`. This
+will initialize a virtual environment with all the dependencies if one does not
+exist and then execute the **src/main.py** file where the test is defined. You
+will need to ensure that the [`pipenv`](https://pipenv.pypa.io) tool is installed
+on your machine.
