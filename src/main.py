@@ -17,7 +17,7 @@ def _parse_position(line: str) -> list[float]:
     return list(map(float, line.split(",")))
 
 
-def _convert_joystick(angle: float) -> Command:
+def _convert_angle(angle: float) -> Command:
     if angle < 90:
         return "0,0"
 
@@ -29,10 +29,13 @@ def _convert_joystick(angle: float) -> Command:
 
     return "1,1"
 
+def _convert_joystick(angle: float) -> str:
+    return f"{_convert_angle(angle)}\n"
+
 
 @models.blackbox(step_size=1.0)
 def smbc(sample: models.Blackbox.Inputs) -> models.Trace[list[float]]:
-    with tempfile.TemporaryFile("w") as input_file:
+    with tempfile.NamedTemporaryFile("w", suffix=".seed", delete=False) as input_file:
         input_file.writelines(
             _convert_joystick(state["joystick"]) for state in sample.times.values()
         )
