@@ -1,3 +1,4 @@
+import itertools
 import pathlib
 import pickle
 import pprint
@@ -62,6 +63,20 @@ def smbc(sample: models.Blackbox.Inputs) -> models.Trace[list[float]]:
     return models.Trace(times=list(sample.times), states=positions)
 
 
+def _print_min(runs: list[staliro.Run]):
+    evals = itertools.chain.from_iterable(run.evaluations for run in runs)
+    eval = min(evals, key=lambda e: e.cost)
+    pprint.pprint(eval.extra.trace.elements)
+
+
+def _save_results(runs: list[staliro.Run], path: pathlib.Path):
+    if path.suffix != ".pickle":
+        path = path.with_suffix(f"{path.suffix}.pickle")
+
+    with path.open("wb") as file:
+        pickle.dump(runs, file)
+
+
 @click.command()
 @click.option("-f", "--frames", type=int, default=100)
 @click.option("-b", "--budget", type=int, default=400)
@@ -75,17 +90,11 @@ def main(frames: int, budget: int, output: pathlib.Path | None):
     )
     opt = optimizers.DualAnnealing()
     runs = staliro.test(smbc, req, opt, opts)
-    run = runs[0]
-    eval = min(run.evaluations, key=lambda e: e.cost)
 
     if output:
-        if output.suffix != ".pickle":
-            output = output.with_suffix(f"{output.suffix}.pickle")
-
-        with output.open("wb") as output_file:
-            pickle.dump(runs, output_file)
+        _save_results(runs, output)
     else:
-        pprint.pprint(eval.extra.trace.elements)
+        _print_min(runs)
 
 
 if __name__ == "__main__":
