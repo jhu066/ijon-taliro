@@ -1,4 +1,5 @@
 import pathlib
+import pprint
 import subprocess
 import tempfile
 import typing
@@ -67,9 +68,11 @@ def main(iterations: int, frames: int):
         signals={"joystick": staliro.SignalInput(control_points=[(0, 360)]*frames)}
     )
     opt = optimizers.UniformRandom()
-    results = staliro.test(smbc, req, opt, opts)
+    runs = staliro.test(smbc, req, opt, opts)
+    run = runs[0]
+    eval = min(run.evaluations, key=lambda e: e.cost)
 
-    print(results)
+    pprint.pprint(eval.extra.trace.elements)
 
 
 if __name__ == "__main__":
