@@ -70,7 +70,7 @@ def main(frames: int, budget: int):
         iterations=budget,
         signals={"joystick": staliro.SignalInput(control_points=[(0, 360)]*frames)}
     )
-    opt = optimizers.UniformRandom()
+    opt = optimizers.DualAnnealing()
     runs = staliro.test(smbc, req, opt, opts)
     run = runs[0]
     eval = min(run.evaluations, key=lambda e: e.cost)
