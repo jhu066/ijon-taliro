@@ -266,3 +266,14 @@ will initialize a virtual environment with all the dependencies if one does not
 exist and then execute the **src/main.py** file where the test is defined. You
 will need to ensure that the [`pipenv`](https://pipenv.pypa.io) tool is installed
 on your machine.
+
+The test supports several command-line flags that can be used to adjust the
+behavior of the test. They can be listed using the the `--help` flag
+(`pipenv run main --help`). The table below briefly describes the function of
+each of the options.
+
+| Flag              | Description                                                                                       |
+|-------------------|---------------------------------------------------------------------------------------------------|
+| `--budget <int>`  | The number of samples to generate                                                                 |
+| `--frames <int>`  | The number of frames to generate input for                                                        |
+| `--output <path>` | Filename to save the [`pickled`](https://docs.python.org/3/library/pickle.html) execution results |
