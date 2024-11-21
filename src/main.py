@@ -1,4 +1,5 @@
 import pathlib
+import pickle
 import pprint
 import subprocess
 import tempfile
@@ -63,7 +64,8 @@ def smbc(sample: models.Blackbox.Inputs) -> models.Trace[list[float]]:
 @click.command()
 @click.option("-f", "--frames", type=int, default=100)
 @click.option("-b", "--budget", type=int, default=400)
-def main(frames: int, budget: int):
+@click.option("-o", "--output", default=None, type=click.Path(dir_okay=False, writable=True, path_type=pathlib.Path))
+def main(frames: int, budget: int, output: pathlib.Path | None):
     req = rtamt.parse_dense("always (x < 100)", {"x": 0, "y": 1})
     opts = staliro.TestOptions(
         tspan=(0, frames),
@@ -75,7 +77,14 @@ def main(frames: int, budget: int):
     run = runs[0]
     eval = min(run.evaluations, key=lambda e: e.cost)
 
-    pprint.pprint(eval.extra.trace.elements)
+    if output:
+        if output.suffix != ".pickle":
+            output = output.with_suffix(f"{output.suffix}.pickle")
+
+        with output.open("wb") as output_file:
+            pickle.dump(runs, output_file)
+    else:
+        pprint.pprint(eval.extra.trace.elements)
 
 
 if __name__ == "__main__":
