@@ -40,6 +40,7 @@ def smbc(sample: models.Blackbox.Inputs) -> models.Trace[list[float]]:
         input_file.writelines(
             _convert_joystick(state["joystick"]) for state in sample.times.values()
         )
+        input_file.seek(0)
 
         cwd = pathlib.Path("utils")
         proc = subprocess.run(
