@@ -7,7 +7,7 @@ import click
 @click.command()
 @click.option("-i", "--inputs-dir", type=click.Path(exists=False, file_okay=False, writable=True, path_type=pathlib.Path), default=pathlib.Path("inputs"))
 @click.option("-o", "--outputs-dir", type=click.Path(exists=False, file_okay=False, writable=True, path_type=pathlib.Path), default=pathlib.Path("outputs"))
-@click.argument("runs_file", type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path))
+@click.argument("runs_path", type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path))
 def extract(inputs_dir: pathlib.Path, outputs_dir: pathlib.Path, runs_path: pathlib.Path):
     if not inputs_dir.exists():
         inputs_dir.mkdir()
