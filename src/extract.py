@@ -28,7 +28,7 @@ def extract(inputs_dir: pathlib.Path, outputs_dir: pathlib.Path, runs_path: path
             ]
 
             with input_path.open("wt") as input_file:
-                input_file.write(f"{evaluation.extra.model}\n")
+                input_file.write("\n".join(evaluation.extra.model))
 
             with output_path.open("wt") as output_file:
                 output_file.write("\n".join(output_trace))
