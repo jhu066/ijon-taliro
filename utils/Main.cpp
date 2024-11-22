@@ -248,7 +248,9 @@ static void mainLoop(bool video, bool trace)
 
 				if (running) {
 					controller1.setButtonState(BUTTON_A,		chs[0]-'0'); // 1st char, activate if not '0'
+					controller1.setButtonState(BUTTON_B,			chs[2]-'0');
 					controller1.setButtonState(BUTTON_RIGHT,	chs[2]-'0'); // skip comma, 3rd char, activate if not '0'
+					controller1.setButtonState(BUTTON_START, chs[0]-'0');
 					engine.update();
 				}
 				// if(running){
