@@ -1,3 +1,11 @@
 *.pickle
 *.test
 *.trace
+
+ijon-traces
+trace.py
+trace.rb
+test*.svg
+uniq.log
+traces.zip
+draw-trace/level1-1/
