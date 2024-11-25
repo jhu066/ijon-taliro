@@ -44,7 +44,7 @@ def _convert_joystick(angle: float) -> Command:
 def smbc(world: int) -> models.Blackbox[list[float], list[str]]:
     @models.blackbox(step_size=1.0)
     def model(sample: models.Blackbox.Inputs) -> staliro.Result[models.Trace[list[float]], list[str]]:
-        with tempfile.NamedTemporaryFile("w", suffix=".seed", delete=False) as input_file:
+        with tempfile.NamedTemporaryFile("w", suffix=".seed") as input_file:
             commands = [_convert_joystick(state["joystick"]) for state in sample.times.values()]
             lines = "\n".join(commands) + "\n"
             input_file.write(lines)
