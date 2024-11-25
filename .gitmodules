@@ -1,0 +1,3 @@
+[submodule "ijon-data"]
+	path = ijon-data
+	url = https://github.com/qthibeault/ijon-data.git
