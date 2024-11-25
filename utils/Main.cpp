@@ -20,7 +20,8 @@ static SDL_Texture* scanlineTexture;
 static SMBEngine* smbEngine = nullptr;
 static uint32_t renderBuffer[RENDER_WIDTH * RENDER_HEIGHT];
 
-
+static int game_start = 0;
+static int game_over = 0;
 static int level = 0;
 
 /**
@@ -245,6 +246,9 @@ static void mainLoop(bool video, bool trace)
 
 				// if ch == 0 => BUTTON_A
 				// if ch == 1 => BUTTON_RIGHT
+				if ((chs[0]-'0' == 1) && (game_start == 0)) {
+					game_start = 1;
+				}
 
 				if (running) {
 					controller1.setButtonState(BUTTON_A,		chs[0]-'0'); // 1st char, activate if not '0'
@@ -345,8 +349,15 @@ static void mainLoop(bool video, bool trace)
 
 				uint64_t pos_y = ((uint64_t)engine.readData(0x00CE))*((uint64_t)engine.readData(0x00B5));
 
+				if(engine.readData(0x0e) == 0x0b) {
+					game_over = 1;
+				}
+				if(engine.readData(0xb5) > 0x01) {
+					game_over = 1;
+				}
 				if(trace && frame%4 == 0){
-					printf("%d,%d\n", world_pos, pos_y);
+					// printf("%d,%d\n", world_pos, pos_y);
+					printf("{x=%d,y=%d,start=%d,dead=%d}\n", world_pos, pos_y, game_start, game_over);
 				}
 				//if(engine.readData(0x1d) == 0x0){ //on a solid surface
 #ifdef _USE_IJON
@@ -360,7 +371,7 @@ static void mainLoop(bool video, bool trace)
 				if(engine.readData(0x07A0) > 0){ //skip pre level timer
 					engine.writeData(0x07a0, 0);
 				}
-				if(engine.readData(0x0e) == 0x0b){return;} //exit if dead
+				if(engine.readData(0x0e) == 0x0b){return; } //exit if dead
 				if(engine.readData(0xb5) > 0x01){return;} //exit if falling below screen
 				if(world_pos > 44 && !hammertime){
 					hammertime = true;
@@ -368,7 +379,12 @@ static void mainLoop(bool video, bool trace)
 				if(world_pos == last_world_pos){
 					idle += 1;
 				}else{ idle = 0; last_world_pos = world_pos; }
-				if(hammertime && idle > 4){return;} //lazy bastard
+				if(hammertime && idle > 4){
+					game_over = 1;
+					printf("{x=%d,y=%d,start=%d,dead=%d}\n", world_pos, pos_y, game_start, game_over);
+					return;
+				} //lazy bastard
+
 				assert(engine.readData(0x1d) != 0x03);
         frame++;
     }
