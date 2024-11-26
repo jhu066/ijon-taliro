@@ -65,7 +65,7 @@ def smbc(bin_path: pathlib.Path, world: int) -> models.Blackbox[Line, list[str]]
             input_file.write(lines)
             input_file.seek(0)
 
-            cwd = pathlib.Path("utils")
+            cwd = pathlib.Path("data")
             proc = subprocess.run(
                 args=f"{bin_path} {world} trace",
                 stdin=input_file,
