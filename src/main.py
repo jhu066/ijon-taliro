@@ -93,13 +93,15 @@ def _ensure_binary(dir_path: str | pathlib.Path) -> pathlib.Path:
     if dir_path.exists() and not dir_path.is_dir():
         raise RuntimeError(f"path {dir_path} already exists and is not a directory")
 
+    src_path = pathlib.Path("ijon-data/SuperMarioBros-C").resolve()
+    dir_path = dir_path.resolve()
     bin_path = dir_path / "smbc"
 
     if bin_path.exists() and not bin_path.is_file():
         raise RuntimeError(f"path {bin_path} already exists and is not a file")
 
-    subprocess.run(f"cmake -S ijon-data/SuperMarioBros-C -b {dir}")
-    subprocess.run(f"cmake --build {dir}")
+    subprocess.run(f"cmake -S {src_path} -B {dir_path}", shell=True)
+    subprocess.run(f"cmake --build {dir_path}", shell=True)
     
     return bin_path
 
