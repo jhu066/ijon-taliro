@@ -1,6 +1,7 @@
 *.pickle
 *.test
 *.trace
+*.svg
 
 ijon-traces
 trace.py
@@ -10,3 +11,4 @@ uniq.log
 traces.zip
 draw-trace/level1-1/
 build/
+.DS_Store
