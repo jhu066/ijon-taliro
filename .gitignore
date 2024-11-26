@@ -9,3 +9,4 @@ test*.svg
 uniq.log
 traces.zip
 draw-trace/level1-1/
+build/
