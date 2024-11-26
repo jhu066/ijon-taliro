@@ -41,7 +41,7 @@ def _convert_joystick(angle: float) -> Command:
     return "1,1"
 
 
-def smbc(world: int) -> models.Blackbox[list[float], list[str]]:
+def smbc(bin_path: pathlib.Path, world: int) -> models.Blackbox[list[float], list[str]]:
     @models.blackbox(step_size=1.0)
     def model(sample: models.Blackbox.Inputs) -> staliro.Result[models.Trace[list[float]], list[str]]:
         with tempfile.NamedTemporaryFile("w", suffix=".seed") as input_file:
@@ -52,7 +52,7 @@ def smbc(world: int) -> models.Blackbox[list[float], list[str]]:
 
             cwd = pathlib.Path("utils")
             proc = subprocess.run(
-                args=f"./smbc {world} trace",
+                args=f"{bin_path} {world} trace",
                 stdin=input_file,
                 stdout=subprocess.PIPE,
                 encoding="utf-8",
@@ -86,6 +86,24 @@ def _save_results(runs: list[staliro.Run], path: pathlib.Path):
         pickle.dump(runs, file)
 
 
+def _ensure_binary(dir_path: str | pathlib.Path) -> pathlib.Path:
+    if not isinstance(dir_path, pathlib.Path):
+        dir_path = pathlib.Path(dir_path)
+
+    if dir_path.exists() and not dir_path.is_dir():
+        raise RuntimeError(f"path {dir_path} already exists and is not a directory")
+
+    bin_path = dir_path / "smbc"
+
+    if bin_path.exists() and not bin_path.is_file():
+        raise RuntimeError(f"path {bin_path} already exists and is not a file")
+
+    subprocess.run(f"cmake -S ijon-data/SuperMarioBros-C -b {dir}")
+    subprocess.run(f"cmake --build {dir}")
+    
+    return bin_path
+
+
 @click.command()
 @click.option("-c", "--control-points", type=int, default=100)
 @click.option("-f", "--frames", type=int, default=1000)
@@ -93,6 +111,7 @@ def _save_results(runs: list[staliro.Run], path: pathlib.Path):
 @click.option("-o", "--output", default=None, type=click.Path(dir_okay=False, writable=True, path_type=pathlib.Path))
 @click.option("-w", "--world", default=0, type=click.IntRange(min=0, max=36))
 def main(control_points: int, frames: int, budget: int, output: pathlib.Path | None, world: int):
+    bin_path = _ensure_binary("build")
     goal = WIN_POSITIONS[world]
     req = rtamt.parse_dense(f"always (x < {goal})", {"x": 0, "y": 1})
     opts = staliro.TestOptions(
@@ -103,7 +122,7 @@ def main(control_points: int, frames: int, budget: int, output: pathlib.Path | N
         }
     )
     opt = optimizers.DualAnnealing()
-    runs = staliro.test(smbc(world), req, opt, opts)
+    runs = staliro.test(smbc(bin_path, world), req, opt, opts)
 
     if output:
         _save_results(runs, output)
