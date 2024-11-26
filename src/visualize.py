@@ -11,7 +11,10 @@ import main
 def _create_svg_path(name: str, trace: staliro.Trace[main.Line]):
     color = "#f8bf00"
     alpha = "0.2"
-    data = [(state["x"], state["y"]) for state in trace.states]
+    data = [
+        (state["x"], state["y"])
+        for state in trace.states if state["x"] != 0 and state["y"] != 0
+    ]
     path_data = " ".join(f"L{x + 8} {y + 16}" for x, y in data)
     path_element = (
         f'<path fill="none" stroke="{color}" stroke-opacity="{alpha}" '
