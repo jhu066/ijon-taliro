@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import json
 import pathlib
 import pickle
 import pprint
@@ -24,8 +25,22 @@ WIN_POSITIONS: typing.Final[dict[int, int]] = {
 }
 
 
-def _parse_position(line: str) -> list[float]:
-    return list(map(float, line.split(",")))
+class Line(typing.TypedDict):
+    x: float
+    y: float
+    dead: bool
+    start: bool
+
+
+def _parse_line(line: str) -> Line:
+    data = json.loads(line)
+
+    return Line(
+        x=float(data["x"]),
+        y=float(data["y"]),
+        dead=data["dead"] == 1,
+        start=data["start"] == 1,
+    )
 
 
 def _convert_joystick(angle: float) -> Command:
@@ -41,9 +56,9 @@ def _convert_joystick(angle: float) -> Command:
     return "1,1"
 
 
-def smbc(bin_path: pathlib.Path, world: int) -> models.Blackbox[list[float], list[str]]:
+def smbc(bin_path: pathlib.Path, world: int) -> models.Blackbox[Line, list[str]]:
     @models.blackbox(step_size=1.0)
-    def model(sample: models.Blackbox.Inputs) -> staliro.Result[models.Trace[list[float]], list[str]]:
+    def model(sample: models.Blackbox.Inputs) -> staliro.Result[models.Trace[Line], list[str]]:
         with tempfile.NamedTemporaryFile("w", suffix=".seed") as input_file:
             commands = [_convert_joystick(state["joystick"]) for state in sample.times.values()]
             lines = "\n".join(commands) + "\n"
@@ -64,12 +79,27 @@ def smbc(bin_path: pathlib.Path, world: int) -> models.Blackbox[list[float], lis
                 raise RuntimeError()
 
             positions = [
-                _parse_position(line) for line in proc.stdout.splitlines() if "," in line
+                _parse_line(line) for line in proc.stdout.splitlines() if line.startswith("{")
             ]
 
         return staliro.Result(models.Trace(times=list(sample.times), states=positions), commands)
 
     return model
+
+
+def req(goal: int) -> staliro.Specification[Line, float, None]:
+    inner = rtamt.parse_dense(f"always (x < {goal})", {"x": 0, "y": 1})
+
+    @staliro.specification()
+    def spec(trace: staliro.Trace[Line]) -> staliro.Result[float, None]:
+        transformed = staliro.Trace(
+            times=list(trace.times),
+            states=[[line["x"], line["y"]] for line in trace.states]
+        )
+
+        return inner.evaluate(transformed)
+
+    return spec
 
 
 def _print_min(runs: list[staliro.Run]):
@@ -114,8 +144,6 @@ def _ensure_binary(dir_path: str | pathlib.Path) -> pathlib.Path:
 @click.option("-w", "--world", default=0, type=click.IntRange(min=0, max=36))
 def main(control_points: int, frames: int, budget: int, output: pathlib.Path | None, world: int):
     bin_path = _ensure_binary("build")
-    goal = WIN_POSITIONS[world]
-    req = rtamt.parse_dense(f"always (x < {goal})", {"x": 0, "y": 1})
     opts = staliro.TestOptions(
         tspan=(0, frames),
         iterations=budget,
@@ -124,7 +152,7 @@ def main(control_points: int, frames: int, budget: int, output: pathlib.Path | N
         }
     )
     opt = optimizers.DualAnnealing()
-    runs = staliro.test(smbc(bin_path, world), req, opt, opts)
+    runs = staliro.test(smbc(bin_path, world), req(WIN_POSITIONS[world]), opt, opts)
 
     if output:
         _save_results(runs, output)
