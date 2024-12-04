@@ -1,6 +1,8 @@
 import itertools
 import pathlib
 import pickle
+import subprocess
+import tempfile
 
 import click
 import staliro
@@ -25,9 +27,14 @@ def _create_svg_path(name: str, trace: staliro.Trace[main.Line]):
     return path_element
 
 
-@click.command("visualize")
+@click.group("visualize")
+def visualize():
+    pass
+
+
+@visualize.command("traces")
 @click.argument("FILE", type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path))
-def visualize(file: pathlib.Path):
+def traces(file: pathlib.Path):
     with file.open("rb") as pickle_file:
         runs = pickle.load(pickle_file)
 
@@ -47,6 +54,23 @@ def visualize(file: pathlib.Path):
 
     with open("mario-1-1.svg", "w") as output_file:
         output_file.write(content)
+
+
+@visualize.command("play")
+@click.argument("FILE", type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path))
+def play(file: pathlib.Path):
+    with file.open("rb") as data:
+        runs = pickle.load(data)
+
+    evals = [e for r in runs for e in r.evaluations]
+    eval = min(evals, key=lambda e: e.cost)
+    smbc = main._ensure_binary("build")
+    data_dir = pathlib.Path("data")
+
+    with tempfile.TemporaryFile("w") as input:
+        input.write("\n".join(eval.extra.model) + "\n")
+        input.seek(0)
+        subprocess.run(args=f"{smbc} 0 video", stdin=input, cwd=data_dir, shell=True)
 
 
 if __name__ == "__main__":
