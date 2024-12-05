@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import itertools
 import json
+import logging
 import pathlib
 import pickle
 import pprint
@@ -59,9 +60,10 @@ def _convert_joystick(angle: float) -> Command:
 def smbc(bin_path: pathlib.Path, world: int) -> models.Blackbox[Line, list[str]]:
     @models.blackbox(step_size=1.0)
     def model(sample: models.Blackbox.Inputs) -> staliro.Result[models.Trace[Line], list[str]]:
+        commands = [_convert_joystick(state["joystick"]) for state in sample.times.values()]
+        lines = "\n".join(commands) + "\n"
+
         with tempfile.NamedTemporaryFile("w", suffix=".seed") as input_file:
-            commands = [_convert_joystick(state["joystick"]) for state in sample.times.values()]
-            lines = "\n".join(commands) + "\n"
             input_file.write(lines)
             input_file.seek(0)
 
@@ -78,8 +80,9 @@ def smbc(bin_path: pathlib.Path, world: int) -> models.Blackbox[Line, list[str]]
             if proc.returncode != 0:
                 raise RuntimeError()
 
+            output = list(proc.stdout.splitlines())
             positions = [
-                _parse_line(line) for line in proc.stdout.splitlines() if line.startswith("{")
+                _parse_line(line) for line in output if line.startswith("{")
             ]
 
         return staliro.Result(models.Trace(times=list(sample.times), states=positions), commands)
@@ -117,6 +120,9 @@ def _save_results(runs: list[staliro.Run], path: pathlib.Path):
 
 
 def _ensure_binary(dir_path: str | pathlib.Path) -> pathlib.Path:
+    logger = logging.getLogger("test.binary")
+    logger.addHandler(logging.NullHandler())
+
     if not isinstance(dir_path, pathlib.Path):
         dir_path = pathlib.Path(dir_path)
 
@@ -130,8 +136,27 @@ def _ensure_binary(dir_path: str | pathlib.Path) -> pathlib.Path:
     if bin_path.exists() and not bin_path.is_file():
         raise RuntimeError(f"path {bin_path} already exists and is not a file")
 
-    subprocess.run(f"cmake -S {src_path} -B {dir_path}", shell=True)
-    subprocess.run(f"cmake --build {dir_path}", shell=True)
+    logger.debug("Configuring SBMC build")
+    res = subprocess.run(
+        args=f"cmake -S {src_path} -B {dir_path} -Wno-dev",
+        stdout=subprocess.PIPE,
+        encoding="utf-8",
+        shell=True,
+    )
+
+    for line in res.stdout.splitlines():
+        logger.debug("\x1b[33;20m" + line + "\x1b[0m")
+
+    logger.debug("Building SMBC binary")
+    res = subprocess.run(
+        args=f"cmake --build {dir_path}",
+        stdout=subprocess.PIPE,
+        encoding="utf-8",
+        shell=True,
+    )
+
+    for line in res.stdout.splitlines():
+        logger.debug("\x1b[33;20m" + line + "\x1b[0m")
     
     return bin_path
 
@@ -142,7 +167,19 @@ def _ensure_binary(dir_path: str | pathlib.Path) -> pathlib.Path:
 @click.option("-b", "--budget", type=int, default=400)
 @click.option("-o", "--output", default=None, type=click.Path(dir_okay=False, writable=True, path_type=pathlib.Path))
 @click.option("-w", "--world", default=0, type=click.IntRange(min=0, max=36))
-def main(control_points: int, frames: int, budget: int, output: pathlib.Path | None, world: int):
+@click.option("-v", "--verbose", is_flag=True)
+def main(
+    control_points: int,
+    frames: int,
+    budget: int,
+    output: pathlib.Path | None,
+    world: int,
+    verbose: bool,
+):
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
+        logging.getLogger("staliro").setLevel(logging.ERROR)
+
     bin_path = _ensure_binary("build")
     opts = staliro.TestOptions(
         tspan=(0, frames),
