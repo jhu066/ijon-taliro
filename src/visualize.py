@@ -3,11 +3,17 @@ import pathlib
 import pickle
 import subprocess
 import tempfile
+import typing
 
 import click
 import staliro
+import staliro.tests as tests
 
 import main
+
+Runs: typing.TypeAlias = typing.List[
+    staliro.Run[typing.Any, float, tests.ModelSpecExtra[main.Line, typing.List[str], None]]
+]
 
 
 def _create_svg_path(name: str, trace: staliro.Trace[main.Line]):
@@ -27,17 +33,34 @@ def _create_svg_path(name: str, trace: staliro.Trace[main.Line]):
     return path_element
 
 
+def _load_runs(file: pathlib.Path) -> Runs:
+    if file.suffix != ".pickle":
+        file = file.with_suffix(f"{file.suffix}.pickle")
+
+    if not file.exists():
+        raise ValueError(f"File {file} does not exist")
+
+    with file.open("rb") as pickle_file:
+        runs = pickle.load(pickle_file)
+
+    if not isinstance(runs, list):
+        raise TypeError()
+
+    if not all(isinstance(run, staliro.Run) for run in runs):
+        raise TypeError()
+
+    return runs
+
+
 @click.group("visualize")
 def visualize():
     pass
 
 
 @visualize.command("traces")
-@click.argument("FILE", type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path))
+@click.argument("FILE", type=click.Path(dir_okay=False, path_type=pathlib.Path))
 def traces(file: pathlib.Path):
-    with file.open("rb") as pickle_file:
-        runs = pickle.load(pickle_file)
-
+    runs = _load_runs(file)
     paths_list = [
         _create_svg_path(f"{n}.trace", e.extra.trace)
         for n, e in enumerate(itertools.chain.from_iterable(run.evaluations for run in runs))
@@ -57,11 +80,9 @@ def traces(file: pathlib.Path):
 
 
 @visualize.command("play")
-@click.argument("FILE", type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path))
+@click.argument("FILE", type=click.Path(dir_okay=False, path_type=pathlib.Path))
 def play(file: pathlib.Path):
-    with file.open("rb") as data:
-        runs = pickle.load(data)
-
+    runs = _load_runs(file)
     evals = [e for r in runs for e in r.evaluations]
     eval = min(evals, key=lambda e: e.cost)
     smbc = main._ensure_binary("build")
